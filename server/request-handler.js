@@ -6,6 +6,8 @@
  * *Hint* Check out the node module documentation at http://nodejs.org/api/modules.html. */
 
 var url = require('url');
+var fs = require('./file-store');
+var _ = require('underscore');
 
 var classes = ['classes'];
 var resources = [ 'room', 'room1', 'room2', 'messages'];
@@ -30,27 +32,30 @@ var handleRequest = function(request, response) {
   var requestRoute = parseRoute( request.url );
   if ( classes.indexOf(requestRoute['aggregate']) < 0  ||
        resources.indexOf(requestRoute['resource']) < 0)  {
-    //console.log('Cannot find ', request.url, requestRoute);
-    respond(404, '[]', response);
+    sendResponse(404, '[]', response);
     return;
   }
 
   if (request.method === 'GET') {
-      console.log('---RESP:', JSON.stringify( store[ requestRoute['aggregate'] ][ requestRoute['resource'] ] ) );
-      respond(200, JSON.stringify( store[ requestRoute['aggregate'] ][ requestRoute['resource'] ] ), response);
-  } else if (request.method === 'POST') {
+      sendResponse(200, JSON.stringify( store[ requestRoute['aggregate'] ][ requestRoute['resource'] ] ), response);
+      return;
+  } 
+
+  if (request.method === 'POST') {
     var data='';
     request.on('data', function(chunk) {
       data += chunk;
     });
     request.on('end', function() {
       store[ requestRoute['aggregate'] ][ requestRoute['resource'] ].push( JSON.parse(data) ) ;
-      console.log( '---STORE:', store );
-      console.log( '---      ', store['classes']['room1']);
-      respond(201, '', response);
+      sendResponse(201, '', response);
     });
-  } else if (request.method === 'OPTIONS') {
-    console.log('request came in of type OPTIONS');
+    return
+  } 
+
+  if (request.method === 'OPTIONS') {
+    console.log('OPTIONS');
+    sendResponse('200', '', response);
   }
 
 };
@@ -58,17 +63,20 @@ var handleRequest = function(request, response) {
 var parseRoute = function(requestUrl) {
     var pathname = url.parse(requestUrl).pathname;
     var route = pathname.split('/');
-    console.log('ROUTE: ', route);
     return { 'aggregate': route[1],
              'resource': route[2]};
 };
 
-var respond = function(statusCode, responseText, response) {
+var sendResponse = function(statusCode, responseText, response) {
+  sendHeaders(statusCode, response)
+  response.end(responseText);
+};
+
+var sendHeaders = function(statusCode, response) {
   var headers = defaultCorsHeaders;
   headers['Content-Type'] = "text/plain";
   response.writeHead(statusCode, headers);
-  response.end(responseText);
-};
+}
 
 /* These headers will allow Cross-Origin Resource Sharing (CORS).
  * This CRUCIAL code allows this server to talk to websites that
