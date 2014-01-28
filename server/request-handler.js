@@ -5,31 +5,69 @@
  * this file and include it in basic-server.js so that it actually works.
  * *Hint* Check out the node module documentation at http://nodejs.org/api/modules.html. */
 
+var url = require('url');
+
+var classes = ['classes'];
+var resources = [ 'room', 'room1', 'room2', 'messages'];
+
+var store = {
+    'classes': {
+      'room1' : [],
+      'room2' : [],
+      'messages' : [],
+      'room': []
+  }
+};
+
 var handleRequest = function(request, response) {
   /* the 'request' argument comes from nodes http module. It includes info about the
   request - such as what URL the browser is requesting. */
 
   /* Documentation for both request and response can be found at
    * http://nodemanual.org/0.8.14/nodejs_ref_guide/http.html */
+  //store['class']['resource'] = read it from the from
 
-  console.log("Serving request type " + request.method + " for url " + request.url);
+  var requestRoute = parseRoute( request.url );
+  if ( classes.indexOf(requestRoute['aggregate']) < 0  ||
+       resources.indexOf(requestRoute['resource']) < 0)  {
+    //console.log('Cannot find ', request.url, requestRoute);
+    respond(404, '[]', response);
+    return;
+  }
 
-  var statusCode = 200;
+  if (request.method === 'GET') {
+      console.log('---RESP:', JSON.stringify( store[ requestRoute['aggregate'] ][ requestRoute['resource'] ] ) );
+      respond(200, JSON.stringify( store[ requestRoute['aggregate'] ][ requestRoute['resource'] ] ), response);
+  } else if (request.method === 'POST') {
+    var data='';
+    request.on('data', function(chunk) {
+      data += chunk;
+    });
+    request.on('end', function() {
+      store[ requestRoute['aggregate'] ][ requestRoute['resource'] ].push( JSON.parse(data) ) ;
+      console.log( '---STORE:', store );
+      console.log( '---      ', store['classes']['room1']);
+      respond(201, '', response);
+    });
+  } else if (request.method === 'OPTIONS') {
+    console.log('request came in of type OPTIONS');
+  }
 
-  /* Without this line, this server wouldn't work. See the note
-   * below about CORS. */
+};
+
+var parseRoute = function(requestUrl) {
+    var pathname = url.parse(requestUrl).pathname;
+    var route = pathname.split('/');
+    console.log('ROUTE: ', route);
+    return { 'aggregate': route[1],
+             'resource': route[2]};
+};
+
+var respond = function(statusCode, responseText, response) {
   var headers = defaultCorsHeaders;
-
   headers['Content-Type'] = "text/plain";
-
-  /* .writeHead() tells our server what HTTP status code to send back */
   response.writeHead(statusCode, headers);
-
-  /* Make sure to always call response.end() - Node will not send
-   * anything back to the client until you do. The string you pass to
-   * response.end() will be the body of the response - i.e. what shows
-   * up in the browser.*/
-  response.end("Hello, World!");
+  response.end(responseText);
 };
 
 /* These headers will allow Cross-Origin Resource Sharing (CORS).
@@ -43,3 +81,5 @@ var defaultCorsHeaders = {
   "access-control-allow-headers": "content-type, accept",
   "access-control-max-age": 10 // Seconds.
 };
+
+module.exports = {handleRequest: handleRequest};

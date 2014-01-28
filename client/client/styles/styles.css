@@ -1,0 +1,37 @@
+
+.app-title {
+    text-align: center;
+}
+
+.chat-input {
+    color: gray;
+}
+
+.chat-main {
+    margin-top: 20px;
+}
+
+.chats-main {
+    margin-top: 20px;
+}
+
+.chat-list {
+    color: red;
+}
+
+.chat-friend {
+    color: green;
+}
+
+.joined-room {
+    background-color: blue;
+}
+.date {
+  color: red;
+}
+.name {
+  color: blue;
+}
+ul {
+  list-style: none;
+}
