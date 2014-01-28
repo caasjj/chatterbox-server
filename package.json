@@ -1,10 +1,11 @@
 {
-  "name": "chatterbox",
+  "name": "chatterbox-server",
   "version": "0.0.1",
-  "main": "server/main.js",
-  "author": "Hack Reactor",
+  "main": "server/basic-server.js",
+  "author": "Walid Hosseini",
   "license": "Copyright 2013, Hack Reactor. All rights reserved.",
   "dependencies": {
-	"underscore": "*"
+  	"underscore": "*",
+    "express": "*"
   }
 }
