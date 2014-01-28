@@ -22,21 +22,15 @@
 };
 
 var handleRequest = function(request, response) {
-  /* the 'request' argument comes from nodes http module. It includes info about the
-  request - such as what URL the browser is requesting. */
-
-  /* Documentation for both request and response can be found at
-  * http://nodemanual.org/0.8.14/nodejs_ref_guide/http.html */
-  //store['class']['resource'] = read it from the from
 
   var requestRoute = parseRoute( request.url );
   var resource = requestRoute['resource'];
   var base = requestRoute['base'];
 
   if ( bases.indexOf(base) < 0  ||
-   resources.indexOf(resource)< 0)  {
+      resources.indexOf(resource)< 0)  {
     console.log('-- 404 -- on ', base, '/', resource);
-    sendResponse(404, '[]', response);
+  sendResponse(404, '[]', response);
   return;
 }
 
@@ -57,23 +51,15 @@ if (request.method === 'POST') {
     postData += chunk;
   });
   request.on('end', function() {
-//    if (resource === 'messages') {
-      postData = JSON.parse(postData);
-      postData.id = createUniqueId(base, resource);
-      postData.createdAt = (new Date(Date.now()) ).toJSON();
-      store[ base][ resource ].push( postData ) ;
-      sendResponse(201, JSON.stringify({'objectId':postData.id}), response);
-      if (resource === 'messages') {
-        processRoomData(postData);
-      }
-      console.log(store.classes.rooms);
-//      return;
-    // }
-    // if (resource === 'rooms') {
-    //   postData = JSON.parse(postData);
-    //   postData.id = createUniqueId(base, resource);
-
-    // }
+    postData = JSON.parse(postData);
+    postData.id = createUniqueId(base, resource);
+    postData.createdAt = (new Date(Date.now()) ).toJSON();
+    store[ base][ resource ].push( postData ) ;
+    sendResponse(201, JSON.stringify({'objectId':postData.id}), response);
+    if (resource === 'messages') {
+      processRoomData(postData);
+    }
+    console.log(store.classes.rooms);
   });
 
   return;
@@ -117,11 +103,6 @@ var sendHeaders = function(statusCode, response) {
   response.writeHead(statusCode, headers);
 };
 
-/* These headers will allow Cross-Origin Resource Sharing (CORS).
- * This CRUCIAL code allows this server to talk to websites that
- * are on different domains. (Your chat client is running from a url
- * like file://your/chat/client/index.html, which is considered a
- * different domain.) */
 var defaultCorsHeaders = {
   "access-control-allow-origin": "*",
   "access-control-allow-methods": "GET, POST, PUT, DELETE, OPTIONS",
