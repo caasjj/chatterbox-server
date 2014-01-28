@@ -22,6 +22,14 @@ var ChatterView = function(model) {
     console.log('clicked on ', $(e.target).text() );
     this._model.updateRoom( $(e.target).text() );
   }, this) );
+
+  $('#new-room').on('keyup', _.bind( function(e) {
+    if (e.keyCode === 13) {
+       this._model.createRoom( $(e.target).val() );
+       $(e.target).val('');
+     }
+  }, this) );
+
 };
 
 ChatterView.prototype.dataEvent = function() {

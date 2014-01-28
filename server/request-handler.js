@@ -5,19 +5,19 @@
  * this file and include it in basic-server.js so that it actually works.
  * *Hint* Check out the node module documentation at http://nodejs.org/api/modules.html. */
 
-var url = require('url');
-var fs = require('./file-store');
-var _ = require('underscore');
+ var url = require('url');
+ var fs = require('./file-store');
+ var _ = require('underscore');
 
-var classes = ['classes'];
-var resources = [ 'room', 'room1', 'room2', 'messages'];
+ var bases = ['classes', 'messages'];
+ var resources = [ 'rooms', 'room1', 'room2', 'messages'];
 
-var store = {
-    'classes': {
-      'room1' : [],
-      'room2' : [],
-      'messages' : [],
-      'room': []
+ var store = {
+  'classes': {
+    'room1' : [],
+    'room2' : [],
+    'messages' : [],
+    'rooms': []
   }
 };
 
@@ -26,57 +26,97 @@ var handleRequest = function(request, response) {
   request - such as what URL the browser is requesting. */
 
   /* Documentation for both request and response can be found at
-   * http://nodemanual.org/0.8.14/nodejs_ref_guide/http.html */
+  * http://nodemanual.org/0.8.14/nodejs_ref_guide/http.html */
   //store['class']['resource'] = read it from the from
 
   var requestRoute = parseRoute( request.url );
-  if ( classes.indexOf(requestRoute['aggregate']) < 0  ||
-       resources.indexOf(requestRoute['resource']) < 0)  {
+  var resource = requestRoute['resource'];
+  var base = requestRoute['base'];
+
+  if ( bases.indexOf(base) < 0  ||
+   resources.indexOf(resource)< 0)  {
+    console.log('-- 404 -- on ', base, '/', resource);
     sendResponse(404, '[]', response);
-    return;
+  return;
+}
+
+if (request.method === 'GET') {
+  var getData = store[ base ][ resource ];
+  if (getData.length > 1) {
+    sendResponse(200, JSON.stringify( { 'results': getData }), response);
+  } else {
+    sendResponse(200, JSON.stringify( getData ), response);
   }
+  return;
+}
 
-  if (request.method === 'GET') {
-      sendResponse(200, JSON.stringify( store[ requestRoute['aggregate'] ][ requestRoute['resource'] ] ), response);
-      return;
-  } 
+if (request.method === 'POST') {
+  console.log('--POST--');
+  var postData='';
+  request.on('data', function(chunk) {
+    postData += chunk;
+  });
+  request.on('end', function() {
+//    if (resource === 'messages') {
+      postData = JSON.parse(postData);
+      postData.id = createUniqueId(base, resource);
+      postData.createdAt = (new Date(Date.now()) ).toJSON();
+      store[ base][ resource ].push( postData ) ;
+      sendResponse(201, JSON.stringify({'objectId':postData.id}), response);
+      if (resource === 'messages') {
+        processRoomData(postData);
+      }
+      console.log(store.classes.rooms);
+//      return;
+    // }
+    // if (resource === 'rooms') {
+    //   postData = JSON.parse(postData);
+    //   postData.id = createUniqueId(base, resource);
 
-  if (request.method === 'POST') {
-    var data='';
-    request.on('data', function(chunk) {
-      data += chunk;
-    });
-    request.on('end', function() {
-      store[ requestRoute['aggregate'] ][ requestRoute['resource'] ].push( JSON.parse(data) ) ;
-      sendResponse(201, '', response);
-    });
-    return
-  } 
+    // }
+  });
 
-  if (request.method === 'OPTIONS') {
-    console.log('OPTIONS');
-    sendResponse('200', '', response);
+  return;
+}
+
+if (request.method === 'OPTIONS') {
+  console.log('OPTIONS');
+  sendResponse('200', '', response);
+  return;
+}
+};
+
+var processRoomData = function(postData) {
+  if (postData.roomname) {
+    store.classes.rooms[ postData.roomname ] = postData.roomname;
   }
+};
 
+var createUniqueId = function(base, resource) {
+  return (store[base][resource]).length;
+};
+
+var existsResource = function (base, resource) {
+  return ( (store[base][resource]).length > 0 );
 };
 
 var parseRoute = function(requestUrl) {
-    var pathname = url.parse(requestUrl).pathname;
-    var route = pathname.split('/');
-    return { 'aggregate': route[1],
-             'resource': route[2]};
+  var pathname = url.parse(requestUrl).pathname;
+  var route = pathname.split('/');
+  return { 'base': route[1],
+  'resource': route[2]};
 };
 
 var sendResponse = function(statusCode, responseText, response) {
-  sendHeaders(statusCode, response)
+  sendHeaders(statusCode, response);
   response.end(responseText);
 };
 
 var sendHeaders = function(statusCode, response) {
   var headers = defaultCorsHeaders;
-  headers['Content-Type'] = "text/plain";
+  headers['Content-Type'] = "application/json";
   response.writeHead(statusCode, headers);
-}
+};
 
 /* These headers will allow Cross-Origin Resource Sharing (CORS).
  * This CRUCIAL code allows this server to talk to websites that

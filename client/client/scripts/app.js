@@ -1,19 +1,19 @@
 // YOUR CODE HERE:
 var Chatterbox = function() {
  // private data
-  var timer          = null;
+  var timer          = [];
 
   // parameters
   this._username      = window.location.search.slice( window.location.search.search('=')+1 );
   this._roomsList     = [];
-  this._roomJoined    = [];
+  this._roomJoined    = null;
   this._onlineUsers   = [];
   this._followList   = [];
   this._messageList   = new MessageList(50);
 
   // public data
   // this._chatterboxUrl = "https://api.parse.com/1/classes/chatterbox";
-  this._chatterboxUrl = "http://localhost:8080";
+  this._chatterboxUrl = "http://localhost:8080/classes"; //messages";
 
   // displays
   // this._chatDisplay = Handlebars.compile( $('#chats').html() );
@@ -21,19 +21,21 @@ var Chatterbox = function() {
 
   // Class methods
   Chatterbox.start = function(func, context) {
-    timer = setInterval(_.bind(func, context), 2000);
+    timer.push( setInterval(_.bind(func, context), 2000) );
   };
 
   Chatterbox.stop = function() {
-    clearInterval( timer );
+    for(var i=0; i<timer.length; i++) {
+      clearInterval( timer[i] );
+    }
   };
 
 };
 
 // private methods
-Chatterbox.prototype._transmit = function(message) {
+Chatterbox.prototype._transmit = function(message, url) {
   return $.ajax({
-    url: this._chatterboxUrl,
+    url: this._chatterboxUrl + '/' + url,
     type: 'POST',
     data: message.json(),
     contentType: 'application/json'
@@ -55,9 +57,9 @@ Chatterbox.prototype._receiveError = function(jqXhr, status) {
   // }
 };
 
-Chatterbox.prototype._fetch = function(objectId) {
-  var url = this._chatterboxUrl + (objectId ? '/' + objectId : '');
-  url = url; //+ '?order=-createdAt';
+Chatterbox.prototype._fetch = function(url) {
+  //var url = url || this._chatterboxUrl;
+  url = this._chatterboxUrl + '/' + url; //+ '?order=-createdAt';
   console.log('fetch url ', url);
   return $.ajax({
     url: url,
@@ -71,12 +73,12 @@ Chatterbox.prototype._parseReceiveMessage = function(data, ajaxOptions, thrownEr
   if (data.hasOwnProperty('results')) {
     this._messageList.addMessages( data.results );
   } else {
-    this._messageList.addMessages( [data] );
+    this._messageList.addMessages( data );
   }
 
   //this._updateUserList();
   this._updateList(this._onlineUsers, 'username');
-  this._updateList(this._roomsList, 'roomname');
+  //this._updateList(this._roomsList, 'roomname');
 
   if (typeof this._view === 'object') {
     this._view.dataEvent();
@@ -84,16 +86,37 @@ Chatterbox.prototype._parseReceiveMessage = function(data, ajaxOptions, thrownEr
   console.log('Got new list of messages');
 };
 
+Chatterbox.prototype._parseReceiveRooms = function(data, ajaxOptions, thrownError) {
+
+  //this._updateUserList();
+  this._updateList(this._roomsList, 'roomname');
+  //this._updateList(this._roomsList, 'roomname');
+  if (data.hasOwnProperty('results')) {
+    this._roomsList = data['results'];
+  } else {
+    this._roomsList = data;
+  }
+
+  if (typeof this._view === 'object') {
+    this._view.dataEvent();
+  }
+  console.log('Got new list of rooms');
+};
+
 // public API
 Chatterbox.prototype.sendMessage = function(message) {
   var that = this;
+  if (!this._roomJoined) {
+    alert('Please create or join a room');
+    return;
+  }
   message = {
     text: message,
     username: this._username,
-    roomname: null
+    roomname: this._roomJoined
   };
   this
-  ._transmit(new Message(message))
+  ._transmit(new Message(message), 'messages')
   .done(function() { that._transmitSuccess(); } )
   .fail(function() { that._transmitError(); } )
   .always(function() {
@@ -101,10 +124,24 @@ Chatterbox.prototype.sendMessage = function(message) {
   });
 };
 
-Chatterbox.prototype.fetchMessages = function(objectId) {
+Chatterbox.prototype.createRoom = function( room ) {
+  var that = this;
+  message = {
+    roomname: room
+  };
+  this
+  ._transmit(new Message(message), 'rooms')
+  .done(function() { that._transmitSuccess(); } )
+  .fail(function() { that._transmitError(); } )
+  .always(function() {
+    console.log('Room create transmission complete');
+  });
+};
+
+Chatterbox.prototype.fetchMessages = function() {
   var that = this;
   this
-  ._fetch(objectId)
+  ._fetch('messages')
   .done( _.bind( this._parseReceiveMessage, this)  )
   .fail( _.bind( this._receiveError, this) )
   .always( function() {
@@ -112,20 +149,31 @@ Chatterbox.prototype.fetchMessages = function(objectId) {
   });
 };
 
-Chatterbox.prototype.getRoomMessages = function() {
-  return this._messageList.filter( {rooms: this._roomJoined} );
+Chatterbox.prototype.fetchRooms = function() {
+  var that = this;
+  this
+    ._fetch('rooms')
+    .done( _.bind( this._parseReceiveRooms, this)  )
+    .fail( _.bind( this._receiveError, this) )
+    .always( function() {
+      console.log('fetchRooms ajax call done');
+    });
 };
 
-Chatterbox.prototype.createRoom = function(roomname) {
-
+Chatterbox.prototype.getRoomMessages = function() {
+  if (this._roomJoined) {
+  return this._messageList.filter( {rooms: this._roomJoined} );
+  }
+  return null;
 };
 
 Chatterbox.prototype.updateRoom = function(roomname) {
-  if (this._roomJoined.indexOf(roomname) > -1) {
-    this._roomJoined = _.without( this._roomJoined, roomname);
-  } else {
-    this._roomJoined.push( roomname );
-  }
+  // if (this._roomJoined.indexOf(roomname) > -1) {
+  //   this._roomJoined = _.without( this._roomJoined, roomname);
+  // } else {
+   // this._roomJoined.push( roomname );
+  //}
+  this._roomJoined = roomname;
   console.log( this._roomJoined);
 };
 
@@ -142,19 +190,19 @@ Chatterbox.prototype.removeFromFollowList = function(username) {
 
 };
 
-Chatterbox.prototype._updateUserList = function() {
-  var onlineUser = {};
-  var notInList = function(user) {
-    return user.username !== onlineUser.username; 
-  };
-  var userList = this._onlineUsers;
-  for(var i=0; i < this._messageList._messages.length; i++) {
-    onlineUser.username = this._messageList._messages[i].username;
-    if (_.every(userList, notInList)) {
-      this._onlineUsers.push({'username' : onlineUser.username});
-    }
-  }
-};
+// Chatterbox.prototype._updateUserList = function() {
+//   var onlineUser = {};
+//   var notInList = function(user) {
+//     return user.username !== onlineUser.username; 
+//   };
+//   var userList = this._onlineUsers;
+//   for(var i=0; i < this._messageList._messages.length; i++) {
+//     onlineUser.username = this._messageList._messages[i].username;
+//     if (_.every(userList, notInList)) {
+//       this._onlineUsers.push({'username' : onlineUser.username});
+//     }
+//   }
+// };
 
 Chatterbox.prototype._updateList = function(list, itemName) {
   var currentItem, dummyObj ;
@@ -171,10 +219,11 @@ Chatterbox.prototype._updateList = function(list, itemName) {
   }
 };
 
-Chatterbox.prototype._updateRoomsList  = function() {
-  var rooms = {};
-};
+//Chatterbox.prototype._updateRoomsList  = function() {
+//   var rooms = {};
+// };
 
 var chatterbox = new Chatterbox();
 var chatterView = new ChatterView( chatterbox );
 Chatterbox.start( chatterbox.fetchMessages, chatterbox );
+Chatterbox.start( chatterbox.fetchRooms, chatterbox );

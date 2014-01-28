@@ -23,7 +23,7 @@ MessageList.prototype.filter = function( filterList ) {
     return this._messages.slice(0);
   }
   var filtered =  this._messages.filter( function(message) {
-    return filterList[filter].indexOf( message[field]) > -1;
+      return filterList[filter].indexOf( message[field]) > -1;
   });
 
   return filtered;
