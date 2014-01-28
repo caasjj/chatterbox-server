@@ -80,7 +80,6 @@ if (request.method === 'POST') {
 }
 
 if (request.method === 'OPTIONS') {
-  console.log('OPTIONS');
   sendResponse('200', '', response);
   return;
 }
