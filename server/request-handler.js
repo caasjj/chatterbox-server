@@ -12,6 +12,8 @@
  var bases = ['classes', 'messages'];
  var resources = [ 'rooms', 'room1', 'room2', 'messages'];
 
+ var pathnames = ['/classes/rooms', '/classes/messages', '/client'];
+
  var store = {
   'classes': {
     'room1' : [],
@@ -22,36 +24,84 @@
 };
 
 var handleRequest = function(request, response) {
-  /* the 'request' argument comes from nodes http module. It includes info about the
-  request - such as what URL the browser is requesting. */
+  var methods = {
+    'GET': {
+      'resource': getMethod,
+      'file': getFile
+    },
+    'POST': postMethod,
+    'OPTIONS': optionsMethod
+  };
 
-  /* Documentation for both request and response can be found at
-  * http://nodemanual.org/0.8.14/nodejs_ref_guide/http.html */
-  //store['class']['resource'] = read it from the from
+  console.log( 'URL: ' ,request.url );
+  var requestUrl =  url.parse( request.url, true, true ) ;
+  var route = requestUrl.pathname;
 
+  if ( !(route.match('/classes/rooms') || route.match('/classes/messages') || route.match('/client')) ) {
+    console.log('-- 404 -- on ', route);
+    sendResponse(404, '[]', response);
+    return;
+  }
+
+  if (request.method !== 'GET') {
+    methods[request.method](request, response);
+  } else {
+    if (route.match('/classes')) {
+      methods[request.method]['resource'](request, response);
+    } else {
+      methods[request.method]['file'](request, response);
+    }
+  }
+};
+
+var getFile = function(request, response) {
+  var fileName = '..' + url.parse(request.url, true, true ).pathname;
+  var resp =  'Load file:' + fileName;
+  console.log(resp);
+  fs.loadFile(fileName, function(err, data) {
+      sendFile(err, data, response, fileName);
+    });
+};
+
+var sendFile = function(err, data, response, filename) {
+  console.log('Got file!');
+  if (err) {
+    console.log('Got error!!');
+    sendResponse(404, '[]', response);
+  } else {
+    console.log('File data: ', data);
+   // sendResponse(200, data, response);
+    var headers = defaultCorsHeaders;
+    if (filename.match('.css')) {
+      headers['Content-Type'] =  "text/css";
+    } else {
+      headers['Content-Type'] =  "text/html";
+    }
+    response.writeHead(200, headers);
+    response.end(data);
+  }
+};
+
+var getMethod = function(request, response){
   var requestRoute = parseRoute( request.url );
   var resource = requestRoute['resource'];
   var base = requestRoute['base'];
-
-  if ( bases.indexOf(base) < 0  ||
-   resources.indexOf(resource)< 0)  {
-    console.log('-- 404 -- on ', base, '/', resource);
-    sendResponse(404, '[]', response);
-  return;
-}
-
-if (request.method === 'GET') {
   var getData = store[ base ][ resource ];
+
   if (getData.length > 1) {
     sendResponse(200, JSON.stringify( { 'results': getData }), response);
   } else {
     sendResponse(200, JSON.stringify( getData ), response);
   }
   return;
-}
+};
 
-if (request.method === 'POST') {
+//if (request.method === 'POST') {
+var postMethod = function(request, response) {
   console.log('--POST--');
+    var requestRoute = parseRoute( request.url );
+  var resource = requestRoute['resource'];
+  var base = requestRoute['base'];
   var postData='';
   request.on('data', function(chunk) {
     postData += chunk;
@@ -67,22 +117,14 @@ if (request.method === 'POST') {
         processRoomData(postData);
       }
       console.log(store.classes.rooms);
-//      return;
-    // }
-    // if (resource === 'rooms') {
-    //   postData = JSON.parse(postData);
-    //   postData.id = createUniqueId(base, resource);
-
-    // }
   });
 
   return;
-}
+};
 
-if (request.method === 'OPTIONS') {
+var optionsMethod = function(request, response) {
   sendResponse('200', '', response);
   return;
-}
 };
 
 var processRoomData = function(postData) {
@@ -111,9 +153,9 @@ var sendResponse = function(statusCode, responseText, response) {
   response.end(responseText);
 };
 
-var sendHeaders = function(statusCode, response) {
+var sendHeaders = function(statusCode, response, content) {
   var headers = defaultCorsHeaders;
-  headers['Content-Type'] = "application/json";
+  headers['Content-Type'] = content || "application/json";
   response.writeHead(statusCode, headers);
 };
 

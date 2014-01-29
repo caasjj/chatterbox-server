@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0 user-scalable=no">
+  <title>chatterbox</title>
+  <!-- Le bootstrap style -->
+  <link rel="stylesheet" href="bower_components/bootstrap/dist/css/bootstrap.css">
+  <!-- Internal styles -->
+  <link rel="stylesheet" href="styles/styles.css">
+  <!-- external javascript -->
+  <script src="bower_components/jquery/jquery.min.js"></script>
+  <script src="bower_components/underscore/underscore.js"></script>
+  <script src="bower_components/handlebars/handlebars.js"></script>
+  <!-- internal javascript -->
+  <script src="scripts/config.js"></script>
+</head>
+<body>
+  <div class="container">
+    <!-- Title -->
+    <div class="row app-title">
+      <h1 class='col-md-12'>Chat-Client</h1>
+    </div>
+    <!-- Chat input -->
+    <div class="row chat-input">
+      <section class='new-chat-room col-md-2'>
+        <label for="new-room"></label>
+        <input type="text" id="new-room" class="form-control"placeholder="New room"/>
+      </section>
+      <section class="col-md-8">
+        <label for="type-chat"></label>
+        <input type="text" id="type-chat" class="form-control" placeholder="type here"/>
+      </section>
+    </div>
+    <!-- Main chat  area-->
+    <div class="row chat-main">
+      <section class='chat-rooms col-md-2'>
+        <script id="rooms" type="text/x-handlebars-template">
+        <ul class="room-list">{{#each this}}
+          <li>{{roomname}}</li>
+          {{/each}}
+        </ul>
+        </script>
+      </section>
+      <section class='chat-display col-md-8'>
+        <script id="chats" type="text/x-handlebars-template">
+        <ul>{{#each this}}
+            <li><span class="date">{{createdAt}}</span> 
+                <span class="name">{{username}}</span>
+                <span class="message-text"> {{text}} </span>
+            </li>
+            {{/each}}
+        </ul>
+        </script>
+      </section>
+      <section class='chat-users col-md-2'>
+        <script id='users' type="text/x-handlebars-template">
+        <ul class="user-list">{{#each this}}
+          <li>{{username}}</li>
+        {{/each}}
+        </ul>
+        </script>
+      </section>
+    </div>
+  </div>
+  <script src="bower_components/bootstrap/dist/js/bootstrap.js"></script>
+  <script src="scripts/message.js"></script>
+  <script src="scripts/view.js"></script>
+  <script src="scripts/app.js"></script>
+</body>
+</html>
