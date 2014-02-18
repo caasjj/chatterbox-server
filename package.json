@@ -5,7 +5,9 @@
   "author": "Walid Hosseini",
   "license": "Copyright 2013, Hack Reactor. All rights reserved.",
   "dependencies": {
-  	"underscore": "*",
-    "express": "*"
+    "underscore": "*",
+    "express": "*",
+    "request": "~2.34.0",
+    "jasmine-node": "~1.13.1"
   }
 }
